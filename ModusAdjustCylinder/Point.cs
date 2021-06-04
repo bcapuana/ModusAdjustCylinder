@@ -1,12 +1,12 @@
 ﻿using System;
-
+using ModusAdjustCylinder_Math;
 namespace ModusAdjustCylinder
 {
     internal class Point
     {
 
-        double[] m_xyz = new double[3],
-                 m_ijk = new double[3];
+        Vector3d m_xyz = new Vector3d(),
+                 m_ijk = new Vector3d();
 
         double m_radius = 0;
 
@@ -18,12 +18,12 @@ namespace ModusAdjustCylinder
 
         #region Public Properties
 
-        public bool HasRadius { get=>m_hasRadius; private set { m_hasRadius = value; } }
-        public bool HasIJK { get => m_hasIJK; private set { m_hasIJK = value; } }
-        public double[] xyz { get => m_xyz; }
-        public double[] ijk { get => m_ijk; }
+        public bool HasRadius { get => m_hasRadius; set { m_hasRadius = value; } }
+        public bool HasIJK { get => m_hasIJK; set { m_hasIJK = value; } }
+        public Vector3d xyz { get => m_xyz; set { m_xyz = value; } }
+        public Vector3d ijk { get => m_ijk; set { m_ijk = value; } }
 
-        public double Radius { get => m_radius; private set { m_radius = value; } }
+        public double Radius { get => m_radius; set { m_radius = value; } }
         #endregion
 
 
@@ -51,9 +51,9 @@ namespace ModusAdjustCylinder
                     result.HasRadius = false;
                     result.HasIJK = true;
                     for (int i = 0; i < 3; i++)
-                        result.ijk[i] = Convert.ToDouble(splitLine[i+3]);
+                        result.ijk[i] = Convert.ToDouble(splitLine[i + 3]);
                 }
-                if(splitLine.Length == 7)
+                if (splitLine.Length == 7)
                 {
                     result.HasRadius = true;
                     result.Radius = Convert.ToDouble(splitLine[6]);

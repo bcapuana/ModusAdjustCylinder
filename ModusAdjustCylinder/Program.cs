@@ -1,6 +1,8 @@
-﻿using System;
+﻿using ModusAdjustCylinder_Math;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace ModusAdjustCylinder
 {
@@ -31,12 +33,103 @@ namespace ModusAdjustCylinder
             if (!CheckArguments(inputFile, rotationAxis, outputPlane)) return;
             if (!ReadFile(inputFile, out List<Point> points)) return;
 
+            if (!AdjustCylinder(points, rotationAxis, outputPlane, out List<Point> adjustedPoints)) return;
+
+            WritePoints(outputFile, adjustedPoints);
 
 
 
 
+        }
+
+        private static void WritePoints(string outputFile, List<Point> adjustedPoints)
+        {
+            using (StreamWriter sw = new StreamWriter(outputFile))
+            {
+                foreach(Point p in adjustedPoints)
+                {
+                    string format = "{0: 0.000000;-0.000000; 0.000000}";
+
+                    string line = string.Join(",", p.xyz.ToArray().Select(item => string.Format(format, item)));
+                    
+                    /*if (p.HasIJK)
+                        line += $",{string.Join(",", p.ijk.ToArray().Select(item => string.Format(format, item)))}";*/
+                    if (p.HasRadius)
+                        line += $",{p.Radius:F6}";
+
+                    sw.WriteLine(line);
+                }
+                sw.Flush();
+                sw.Close();
+            }
+        }
+
+        private static bool ProjectPoint(Vector3d rotationVector, Point p, out Point projectedPoint)
+        {
+            try
+            {
+                double c = new Vector3d(0, 0, 0) * rotationVector;
+                double a = (p.xyz * rotationVector) - c;
+                projectedPoint = new Point()
+                {
+                    xyz = p.xyz - a * rotationVector,
+                    ijk = p.ijk,
+                    HasRadius = p.HasRadius,
+                    HasIJK = p.HasIJK,
+                    Radius = p.Radius
+                };
+            }
+            catch(Exception ex)
+            {
+                projectedPoint = null;
+                Console.WriteLine(ex.Message);
+                return false;
+
+            }
+            return true;
+        }
+
+        private static bool AdjustCylinder(List<Point> points, Axis rotationAxis, BasicPlane outputPlane, out List<Point> adjustedPoints)
+        {
+            adjustedPoints = null;
+            Vector3d rotationVector = new Vector3d(1, 0, 0);
+            if (rotationAxis == Axis.Y) rotationVector = new Vector3d(0, 1, 0);
+            else if (rotationAxis == Axis.Z) rotationVector = new Vector3d(0, 0, 1);
+
+            Vector3d outputPlaneVector = new Vector3d(1, 0, 0);
+            if (outputPlane == BasicPlane.XY) outputPlaneVector = new Vector3d(0, 0, 1);
+            else if (outputPlane == BasicPlane.YZ) outputPlaneVector = new Vector3d(1, 0, 0);
+            else if (outputPlane == BasicPlane.ZX) outputPlaneVector = new Vector3d(0, 1, 0);
+
+            Vector3d resultDirection = (outputPlaneVector^rotationVector).Normalized();
+
+            adjustedPoints = new List<Point>();
+            foreach (Point p in points)
+            {
+                if(!ProjectPoint(rotationVector,p,out Point projectedPoint))
+                    return false;
+
+                double dot = projectedPoint.xyz.Normalized() * resultDirection;
+                double angle = Math.Acos(dot);
+                double angleDegrees = angle * (180.0 / Math.PI);
+
+                if (angle > Math.PI / 2.0) angle = -((Math.PI) - angle);
+                angleDegrees = angle * (180.0 / Math.PI);
 
 
+                AngleAxisd aa = new AngleAxisd(-angle, rotationVector);
+
+                Point rotatedPoint = new()
+                {
+                    xyz = aa * p.xyz,
+                    ijk = aa * p.ijk,
+                    HasIJK = p.HasIJK,
+                    HasRadius = p.HasRadius,
+                    Radius = p.Radius
+                };
+                adjustedPoints.Add(rotatedPoint);
+            }
+            return true;
         }
 
         private static bool ReadFile(string inputFile, out List<Point> points)
@@ -99,7 +192,7 @@ namespace ModusAdjustCylinder
                 }
 
                 rotationAxis = (Axis)tempAxis;
-                if (!Enum.TryParse(typeof(BasicPlane), args[2], true, out object tempPlane))
+                if (!Enum.TryParse(typeof(BasicPlane), args[3], true, out object tempPlane))
                 {
                     Console.WriteLine("Output Plane is not valid.");
                     return false;

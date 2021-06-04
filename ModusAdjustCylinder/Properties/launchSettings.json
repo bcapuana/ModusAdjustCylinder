@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "ModusAdjustCylinder": {
+      "commandName": "Project",
+      "commandLineArgs": "c:\\temp\\points.csv c:\\temp\\adjusted.csv x XY",
+      "nativeDebugging": true
+    }
+  }
+}
